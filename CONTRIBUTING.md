@@ -1,0 +1,17 @@
+# Contributing
+
+Start by running the two example commands in the README and the test suite:
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+No packages need to be installed for this command. Tests execute real child processes for launch errors, timeouts, capture limits, literal arguments, baseline instability and changed JSON results.
+
+Useful additions include an optional adapter for file-based JSON commands, support for selecting one output field, or additional value-preserving presentations. Keep those features explicit: a target's byte-oriented behavior can be intentional.
+
+Before adding a presentation, demonstrate that every generated payload decodes to the original value. Preserve decimal precision, array order, Unicode string contents and unique object members. Add a positive target that passes and an independent broken target that the new case catches.
+
+Before changing output comparison, add tests for booleans versus numbers, exact decimal values, JSON Pointer escaping and missing fields. Keep report schema changes documented. Reports should carry hashes and locations rather than fixture values or command arguments.
+
+Open a focused issue or pull request with the command you ran, the observed report and a small synthetic fixture. Keep credentials and private input data out of examples and reports.

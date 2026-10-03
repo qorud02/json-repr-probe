@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "json-repr-probe"
+version = "0.1.0"
+description = "Probe value-preserving JSON presentations against a local CLI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = []
+
+[project.scripts]
+json-repr-probe = "json_repr_probe.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["json_repr_probe*"]
