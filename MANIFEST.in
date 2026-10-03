@@ -1,0 +1,3 @@
+graft examples
+graft docs
+include CONTRIBUTING.md
