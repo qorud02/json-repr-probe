@@ -15,6 +15,7 @@ def main(argv=None):
     parser.add_argument("--timeout", type=float, default=10.0, help="seconds per target invocation (default: 10)")
     parser.add_argument("--max-bytes", type=int, default=1048576, help="size limit for each input/stdout/stderr (default: 1 MiB)")
     parser.add_argument("--cwd", type=Path, help="target working directory; fixture remains relative to the caller")
+    parser.add_argument("--compare-pointer", help="compare one output value using an RFC 6901 JSON Pointer (default: whole output)")
     parser.add_argument("--format", choices=("text", "json"), default="text")
     parser.add_argument("command", nargs=argparse.REMAINDER, help="-- executable [arguments]")
     args = parser.parse_args(argv)
@@ -24,7 +25,8 @@ def main(argv=None):
             raise ProbeError("max bytes must be a positive integer")
         with args.input.open("rb") as stream:
             payload = stream.read(args.max_bytes + 1)
-        report = probe(payload, command, timeout=args.timeout, max_bytes=args.max_bytes, cwd=args.cwd)
+        report = probe(payload, command, timeout=args.timeout, max_bytes=args.max_bytes,
+                       cwd=args.cwd, compare_pointer=args.compare_pointer)
     except (OSError, ProbeError) as exc:
         message = str(exc) if isinstance(exc, ProbeError) else "cannot read input or access target working directory"
         print("json-repr-probe: " + message, file=sys.stderr)

@@ -9,6 +9,7 @@ import tempfile
 import time
 
 from .core import Case, ProbeError, first_difference, make_cases, parse_json
+from .pointer import PointerMissing, pointer_tokens, resolve_pointer
 
 
 def _stop(process):
@@ -68,7 +69,8 @@ def run_case(command, case, *, timeout, max_bytes, cwd=None):
         return record, value
 
 
-def probe(payload, command, *, timeout=10.0, max_bytes=1048576, cwd=None):
+def probe(payload, command, *, timeout=10.0, max_bytes=1048576, cwd=None,
+          compare_pointer=None):
     """Run a baseline control, then test distinct equivalent presentations."""
     if not isinstance(payload, bytes):
         raise ProbeError("input payload must be bytes")
@@ -80,31 +82,48 @@ def probe(payload, command, *, timeout=10.0, max_bytes=1048576, cwd=None):
         raise ProbeError("timeout must be a finite positive number")
     if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or max_bytes <= 0:
         raise ProbeError("max bytes must be a positive integer")
+    tokens = () if compare_pointer is None else pointer_tokens(compare_pointer)
+    comparison_path = "" if compare_pointer is None else compare_pointer
     if len(payload) > max_bytes:
         raise ProbeError("input exceeds max bytes")
     cases = make_cases(payload)
     if any(len(case.payload) > max_bytes for case in cases):
         raise ProbeError("a generated presentation exceeds max bytes; raise --max-bytes")
     report = {"schema_version": 1, "status": "passed", "cases": []}
-    baseline, expected = run_case(command, cases[0], timeout=timeout, max_bytes=max_bytes, cwd=cwd)
+    if compare_pointer is not None:
+        report["comparison_pointer"] = compare_pointer
+
+    def run_selected(case):
+        record, value = run_case(command, case, timeout=timeout,
+                                 max_bytes=max_bytes, cwd=cwd)
+        if record["status"] == "passed":
+            try:
+                value = resolve_pointer(value, tokens)
+            except PointerMissing:
+                record.update(status="missing-pointer",
+                              difference={"pointer": comparison_path, "kind": "missing"})
+                value = None
+        return record, value
+
+    baseline, expected = run_selected(cases[0])
     report["cases"].append(baseline)
     if baseline["status"] != "passed":
         report["status"] = "baseline-failed"
         return report
-    control, repeated = run_case(command, Case("baseline-repeat", payload), timeout=timeout, max_bytes=max_bytes, cwd=cwd)
+    control, repeated = run_selected(Case("baseline-repeat", payload))
     report["cases"].append(control)
     if control["status"] != "passed":
         report["status"] = "baseline-failed"
         return report
-    difference = first_difference(expected, repeated)
+    difference = first_difference(expected, repeated, comparison_path)
     if difference is not None:
         control.update(status="different-output", difference=difference)
         report["status"] = "unstable-baseline"
         return report
     for case in cases[1:]:
-        record, actual = run_case(command, case, timeout=timeout, max_bytes=max_bytes, cwd=cwd)
+        record, actual = run_selected(case)
         if record["status"] == "passed":
-            difference = first_difference(expected, actual)
+            difference = first_difference(expected, actual, comparison_path)
             if difference is not None:
                 record.update(status="different-output", difference=difference)
         report["cases"].append(record)

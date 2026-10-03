@@ -52,6 +52,26 @@ For an installed entry point, run `python -m pip install .`, then use `json-repr
 
 The original fixture runs twice before the other cases. If those results differ, the report says `unstable-baseline` and stops. This makes a changing timestamp or random result visible before attributing a difference to JSON formatting.
 
+## Compare a result inside an envelope
+
+A command may return stable data together with a new request ID or timing value on each invocation. Use `--compare-pointer /data` to compare the result at `data`. The commands below run the checked-out source:
+
+```sh
+python -m json_repr_probe --input examples/input.json --compare-pointer /data -- python -m examples.metadata_cli
+```
+
+This example returns a new `request_id` and an unchanged `data` value. Selecting `/data` passes with exit `0`; omitting the option reports `unstable-baseline` at `/request_id`.
+
+Turn on the example's first-member bug:
+
+```sh
+python -m json_repr_probe --input examples/input.json --compare-pointer /data -- python -m examples.metadata_cli --first-key
+```
+
+It fails with exit `1` at `/data/selected`. A missing `data` field also fails. Selection never substitutes a default value or skips a case.
+
+See the [output selection guide](docs/output-selection.md) for a CI step, escaped field names, array elements and the report contract.
+
 Distinct presentations are generated deterministically:
 
 | Presentation | What changes |
@@ -98,6 +118,8 @@ Run a trusted, single-process target in a disposable working directory when it w
 ## Related tools and specification
 
 - [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259) describes JSON objects as unordered, arrays as ordered, insignificant structural whitespace and equivalent character escapes.
+- [RFC 6901](https://www.rfc-editor.org/rfc/rfc6901) defines the JSON Pointer strings used to select an output value and locate differences.
+- [jq](https://jqlang.org/manual/) provides filters for extracting and transforming JSON. Output selection here applies directly to every target invocation while retaining full-output parsing, exit-status and capture checks.
 - [JSONTestSuite](https://github.com/nst/JSONTestSuite) supplies a corpus for JSON parser acceptance and rejection. This probe checks an application's behavior across equivalent valid representations of one fixture.
 - [Hypothesis](https://hypothesis.readthedocs.io/en/latest/) generates test data for property tests. This probe offers a fixed set of presentations and a command boundary you can use without embedding a testing framework in the target.
 
