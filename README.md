@@ -106,3 +106,30 @@ Run a trusted, single-process target in a disposable working directory when it w
 Run `python -m unittest discover -s tests -v`. The [contributor guide](CONTRIBUTING.md) describes useful changes and regression requirements.
 
 MIT license.
+
+## Container and wheel
+
+The Linux amd64 container packages Python and the probe together. From this repository directory:
+
+```sh
+docker run --rm --mount "type=bind,source=${PWD},target=/work,readonly" ghcr.io/qorud02/json-repr-probe:0.1.0 --input /work/examples/input.json -- python -m examples.stable_cli
+```
+
+Windows PowerShell uses Docker Desktop with Linux containers and the same command. The stable example exits `0`. Replace `examples.stable_cli` with `examples.order_sensitive_cli` to see a changed `/selected` result and exit `1`.
+
+To check a trusted Python target in your current directory:
+
+```sh
+docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=16m --mount "type=bind,source=${PWD},target=/work,readonly" ghcr.io/qorud02/json-repr-probe:0.1.0 --input /work/fixture.json -- python /work/transform.py
+```
+
+The target receives each JSON presentation on stdin. The image runs as UID `10001` and includes Python 3.12 plus the probe. Use the wheel on your host, or a derived image, for targets needing other runtimes or libraries. Keep target files readable by the container user; the mounted directory is read-only.
+
+Download `json_repr_probe-0.1.0-py3-none-any.whl` and `SHA256SUMS` from the [release](https://github.com/qorud02/json-repr-probe/releases/tag/v0.1.0), then install:
+
+```sh
+python -m pip install ./json_repr_probe-0.1.0-py3-none-any.whl
+json-repr-probe --version
+```
+
+The wheel requires Python 3.10 or newer and has no runtime dependencies. Versioned container tags and release checksums identify the distributed artifacts. The [package workflow](.github/workflows/package.yml) builds and tests a container before pushing it, and produces a checked wheel with a checksum file.
