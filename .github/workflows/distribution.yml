@@ -18,6 +18,8 @@ jobs:
           python-version: '3.12'
       - name: Install build frontend
         run: python -m pip install build
+      - name: Create example bytecode as in a previously used checkout
+        run: python -m compileall -q examples
       - name: Build source archive and wheel from that archive
         run: python -m build --outdir dist
       - name: Verify wheel bytes and metadata against source

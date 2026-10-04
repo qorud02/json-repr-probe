@@ -1,3 +1,4 @@
 graft examples
 graft docs
 include CONTRIBUTING.md
+global-exclude *.py[cod]
