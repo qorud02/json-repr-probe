@@ -20,7 +20,9 @@ def target(code):
 class RunnerTests(unittest.TestCase):
     def test_stable_command_passes(self):
         command = target("import sys,json; print(json.dumps(json.loads(sys.stdin.buffer.read()),sort_keys=True))")
-        report = probe(FIXTURE, command, cwd=ROOT)
+        # Native float decoding is exact for these binary-representable values.
+        payload = b'{"z":"hello /","a":[0,1,-1,1.5,9007199254740992]}'
+        report = probe(payload, command, cwd=ROOT)
         self.assertEqual(report["status"], "passed")
         self.assertGreaterEqual(len(report["cases"]), 8)
         self.assertEqual(report["cases"][1]["name"], "baseline-repeat")

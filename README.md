@@ -2,7 +2,7 @@
 
 Find CLI bugs that appear when the same JSON value is written differently.
 
-`json-repr-probe` sends one fixture to your command using different object member orders, whitespace, line endings and Unicode escapes. It compares the command's JSON results and reports the first changed field as a JSON Pointer.
+`json-repr-probe` sends one fixture to your command using different object member orders, whitespace, line endings, Unicode escapes and equivalent number spellings. It compares the command's JSON results and reports the first changed field as a JSON Pointer.
 
 Use it for a CLI whose contract depends on parsed JSON values. Each invocation reads one JSON document from stdin and writes one JSON document to stdout.
 
@@ -82,8 +82,9 @@ Distinct presentations are generated deterministically:
 | Escaped Unicode | UTF-8 characters represented with JSON Unicode escapes |
 | Escaped slashes | `/` represented as `\/` in strings |
 | Padded whitespace | Legal JSON whitespace before and after the document |
+| Exponent / normalized numbers | Exact coefficient/exponent forms and insignificant numeric zeros |
 
-Duplicate byte sequences are omitted. Arrays retain their order. String contents, including normalization forms and embedded line breaks, retain their value. Numbers are parsed and written with decimal precision rather than a conversion to binary floating point.
+Duplicate byte sequences are omitted. Arrays retain their order. String contents, including normalization forms and embedded line breaks, retain their value. Numbers are parsed and written with decimal precision rather than a conversion to binary floating point. Numeric cases preserve signed zero and stay compact for large exponents. They can expose integer-versus-float assumptions or precision loss in the target. See the [numeric presentation guide](docs/numeric-presentations.md) for independent passing and failing examples and compatibility notes.
 
 ## Results and CI
 

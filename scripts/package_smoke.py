@@ -31,12 +31,14 @@ with tempfile.TemporaryDirectory(prefix="json-package-smoke-") as directory:
         prefix = base + [args.container]
         target_python = "python"
         fixture = "/work/examples/input.json"
+        numeric_fixture = "/work/examples/numeric-input.json"
         example = lambda name: "/work/examples/" + name + ".py"
         counter = "/tmp/probe-counter"
     else:
         prefix = [str(Path(args.console).absolute())]
         target_python = str(Path(args.python).absolute())
         fixture = str(root / "examples/input.json")
+        numeric_fixture = str(root / "examples/numeric-input.json")
         example = lambda name: str(root / "examples" / (name + ".py"))
         counter = str(temp / "counter")
 
@@ -58,6 +60,14 @@ with tempfile.TemporaryDirectory(prefix="json-package-smoke-") as directory:
     broken = run(invocation + [target_python, "-I", example("order_sensitive_cli")], 1,
                  "changed-output", "failed")
     assert any(case.get("difference", {}).get("pointer") == "/selected" for case in broken["cases"])
+    numeric = ["--input", numeric_fixture, "--format", "json", "--"]
+    run(numeric + [target_python, "-I", example("numeric_value_cli")], 0,
+        "exact-numeric-value", "passed")
+    numeric_bug = run(numeric + [target_python, "-I", example("numeric_type_cli")], 1,
+                      "native-numeric-type-dependency", "failed")
+    changed = [case for case in numeric_bug["cases"] if case["status"] == "different-output"]
+    assert [case["name"] for case in changed] == ["numbers-exponent"], numeric_bug
+    assert changed[0]["difference"] == {"pointer": "/whole", "kind": "value"}
     unstable = ("from pathlib import Path; p=Path(" + repr(counter) + "); "
                 "n=int(p.read_text())+1 if p.exists() else 1; p.write_text(str(n)); print(n)")
     run(invocation + [target_python, "-I", "-c", unstable], 1, "unstable-baseline", "unstable-baseline")

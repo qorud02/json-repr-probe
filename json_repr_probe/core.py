@@ -53,8 +53,50 @@ def parse_json(payload):
         raise ProbeError("invalid UTF-8 JSON") from exc
 
 
-def render_json(value, *, key_order="original", ascii_only=False, pretty=False):
+def _render_number(value, style):
+    """Change a finite Decimal's spelling without rounding or exponent expansion."""
+    if style == "original":
+        return str(value)
+    sign, digits, exponent = value.as_tuple()
+    prefix = "-" if sign else ""
+    coefficient = "".join(str(digit) for digit in digits)
+    if style == "exponent":
+        # Keep the stored exponent, including at Decimal's lowest boundary.
+        return prefix + coefficient + "e" + str(exponent)
+
+    # Removing trailing zeroes is exact string work. Decimal.normalize() would
+    # first round under the caller's active context, so it cannot be used here.
+    reduced = coefficient.rstrip("0")
+    if not reduced:
+        return prefix + "0"
+    exponent += len(coefficient) - len(reduced)
+    coefficient = reduced
+    scientific = coefficient + "e" + str(exponent)
+    point = len(coefficient) + exponent
+    if exponent >= 0:
+        plain_length = point
+    elif point > 0:
+        plain_length = len(coefficient) + 1
+    else:
+        plain_length = 2 - point + len(coefficient)
+    # Compute the length before allocating zeros: 1e1000000000 stays short.
+    if plain_length > len(scientific):
+        return prefix + scientific
+    if exponent >= 0:
+        plain = coefficient + "0" * exponent
+    elif point > 0:
+        plain = coefficient[:point] + "." + coefficient[point:]
+    else:
+        plain = "0." + "0" * -point + coefficient
+    return prefix + plain
+
+
+def render_json(value, *, key_order="original", ascii_only=False, pretty=False,
+                number_style="original"):
     """Serialize parsed values without converting decimal numbers to floats."""
+    if number_style not in {"original", "exponent", "normalized"}:
+        raise ProbeError("unsupported number presentation")
+
     def render(item, level):
         if item is None:
             return "null"
@@ -63,9 +105,9 @@ def render_json(value, *, key_order="original", ascii_only=False, pretty=False):
         if isinstance(item, Decimal):
             if not item.is_finite():
                 raise ProbeError("nonfinite number")
-            return str(item)
+            return _render_number(item, number_style)
         if isinstance(item, int):
-            return str(item)
+            return str(item) if number_style == "original" else _render_number(Decimal(item), number_style)
         if isinstance(item, str):
             return json.dumps(item, ensure_ascii=ascii_only)
         if isinstance(item, (dict, list)):
@@ -118,6 +160,8 @@ def make_cases(payload):
         ("escaped-unicode", render_json(value, ascii_only=True).encode("utf-8")),
         ("escaped-slashes", compact.replace("/", "\\/").encode("utf-8")),
         ("padded-whitespace", (" \t\r\n" + compact + "\r\n\t ").encode("utf-8")),
+        ("numbers-exponent", render_json(value, number_style="exponent").encode("utf-8")),
+        ("numbers-normalized", render_json(value, number_style="normalized").encode("utf-8")),
     ]
     seen = set()
     cases = []
