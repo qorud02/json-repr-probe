@@ -61,7 +61,9 @@ def verify(dist):
         required = [
             "examples/input.json", "examples/stable_cli.py",
             "examples/order_sensitive_cli.py", "examples/metadata_cli.py",
-            "docs/output-selection.md", "CONTRIBUTING.md", "LICENSE",
+            "docs/output-selection.md", "docs/numeric-presentations.md",
+            "examples/numeric-input.json", "examples/numeric_value_cli.py",
+            "examples/numeric_type_cli.py", "CONTRIBUTING.md", "LICENSE",
             "README.md", "pyproject.toml",
         ]
         for folder in ("json_repr_probe", "tests"):
@@ -103,15 +105,17 @@ def verify(dist):
             raise ValueError("Installed CLI version differs from project metadata")
         checks = []
         cases = (
-            ("stable_cli.py", [], [], 0, "passed", None),
-            ("order_sensitive_cli.py", [], [], 1, "failed", "/selected"),
-            ("metadata_cli.py", ["--compare-pointer", "/data"], [], 0, "passed", None),
-            ("metadata_cli.py", ["--compare-pointer", "/data"], ["--first-key"],
+            ("input.json", "stable_cli.py", [], [], 0, "passed", None),
+            ("input.json", "order_sensitive_cli.py", [], [], 1, "failed", "/selected"),
+            ("input.json", "metadata_cli.py", ["--compare-pointer", "/data"], [], 0, "passed", None),
+            ("input.json", "metadata_cli.py", ["--compare-pointer", "/data"], ["--first-key"],
              1, "failed", "/data/selected"),
+            ("numeric-input.json", "numeric_value_cli.py", [], [], 0, "passed", None),
+            ("numeric-input.json", "numeric_type_cli.py", [], [], 1, "failed", "/whole"),
         )
-        for fixture, options, arguments, expected, status, pointer in cases:
+        for input_name, fixture, options, arguments, expected, status, pointer in cases:
             result = run(
-                [str(command), "--input", str(source / "examples/input.json"),
+                [str(command), "--input", str(source / "examples" / input_name),
                  "--format", "json", *options, "--", str(python),
                  str(source / "examples" / fixture), *arguments],
                 outside, expected,
