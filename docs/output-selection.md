@@ -98,3 +98,9 @@ assert report["status"] == "passed", report
 ```
 
 Omit `compare_pointer` or pass `None` for the existing whole-output comparison. Pass `""` to select the root explicitly.
+
+All JSON numbers must remain finite and fit the supported Decimal range before
+selection, including fields outside the selected value. This validation also
+applies to Python API callers that disable Decimal's `InvalidOperation` trap.
+Unsupported numbers fail the case as `invalid-json`; they cannot be hidden by
+selecting an unrelated field.
