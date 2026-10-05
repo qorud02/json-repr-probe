@@ -23,6 +23,14 @@ def _reject_constant(_value):
     raise ProbeError("nonstandard numeric constant")
 
 
+def _finite_number(text):
+    number = Decimal(text)
+    # Decimal can return NaN for an unsupported exponent when traps are disabled.
+    if not number.is_finite():
+        raise ProbeError("number exceeds the supported Decimal range")
+    return number
+
+
 def _check_strings(value, depth=0):
     if depth > 128:
         raise ProbeError("JSON nesting exceeds 128 levels")
@@ -42,7 +50,7 @@ def parse_json(payload):
     """Parse UTF-8 JSON with exact numbers and unambiguous object members."""
     try:
         text = payload.decode("utf-8") if isinstance(payload, bytes) else payload
-        value = json.loads(text, parse_float=Decimal, parse_int=Decimal,
+        value = json.loads(text, parse_float=_finite_number, parse_int=_finite_number,
                            parse_constant=_reject_constant,
                            object_pairs_hook=_unique_object)
         _check_strings(value)
